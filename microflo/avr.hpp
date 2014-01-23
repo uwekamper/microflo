@@ -18,6 +18,9 @@
 
 // Timers, see
 // http://www.adnbr.co.uk/articles/counting-milliseconds
+// PWM, see
+// http://maxembedded.com/2011/08/07/avr-timers-pwm-mode-part-i/
+// http://maxembedded.com/2012/01/07/avr-timers-pwm-mode-part-ii/
 
 
 #ifndef F_CPU
@@ -47,12 +50,31 @@ static const AvrPort ports[6] = {
     {&DDRF, &PINF, &PORTF},
 };
 
+static const int8_t ADC_START_PIN = 5*8; // PORTF0, correct for AT90USB1287
+
 static volatile long g_millis = 0;
+static volatile uint8_t g_adc_values[8] = {};
+static volatile int8_t g_adc_channel = -1;
 
 ISR (TIMER1_COMPA_vect)
 {
     g_millis++;
 }
+
+ISR(ADC_vect)
+{
+    if (g_adc_channel > 0) {
+        g_adc_values[g_adc_channel] = ADCH;
+        g_adc_channel++
+        if (g_adc_channel >= 7) {
+            g_adc_channel = 0;
+        }
+        ADMUX = 0xE0 + g_adc_channel;
+        //ADMUX |= (0b00011111 | g_adc_channel);
+    }
+    ADCSRA |= 1<<ADSC;
+}
+
 
 class Avr8IO : public IO {
 public:
@@ -66,6 +88,15 @@ public:
         OCR1AH = (MILLISECOND_OVERFLOW >> 8);
         OCR1AL = MILLISECOND_OVERFLOW;
         TIMSK1 |= (1 << OCIE1A);
+
+        // Enable ADC, ADC interrupt. Pre-scale=clk/128
+        ADCSRA = 0x8F;
+        // Vref=2.56V internal, left justify data, ADC0 as input channel
+        ADMUX = 0xE0;
+        ADCSRA |= 1<<ADSC; // Start Conversion
+
+
+
     }
     ~Avr8IO() {
     }
@@ -113,16 +144,24 @@ public:
     }
 
     // Analog
-    // FIXME: implement
     virtual long AnalogRead(int pin) {
-        return 0;
+        pin = pin-ADC_START_PIN;
+        if (pin < 0 || pin > 7 || g_adc_channel < 0) {
+            return -1;
+        }
+
+        long val;
+        ATOMIC_BLOCK(ATOMIC_FORCEON) {
+            val = g_adc_values[pin];
+        }
+        return val;
     }
+    // FIXME: implement
     virtual void PwmWrite(int pin, long dutyPercent) {
 
     }
 
     // Timer
-    // FIXME: implement
     virtual long TimerCurrentMs() {
         long millis;
         ATOMIC_BLOCK(ATOMIC_FORCEON) {

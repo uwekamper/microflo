@@ -20,6 +20,12 @@ test/network.js
 test/websocketapi.js
 microflo.cc
 microflo.js
+lib/runtime.js
+lib/commandstream.js
+lib/generate.js
+lib/componentlib.js
+lib/microflo.js
+Makefile
 package.json
 README.md
 CHANGES.md
