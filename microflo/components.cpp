@@ -923,6 +923,56 @@ static const unsigned char max7219_characters[38][8]={
     {0x0,0x7F,0x2,0x4,0x8,0x10,0x20,0x7F},//Z
 };
 
+
+class WriteSPI : public SingleOutputComponent {
+public:
+    LedMatrixMax()
+        : pin_cs(-1)
+        , pin_din(-1)
+        , pin_clk(-1)
+    {}
+
+    virtual void process(Packet in, MicroFlo::PortId port) {
+        using namespace WriteSPI;
+        if (port == InPorts::in) {
+            if (in.isByte()) {
+                data = in.asByte();
+            }
+            update();
+        } else if (port == InPorts::pinclk) {
+            pin_clk = in.asInteger();
+            io->PinSetMode(pin_clk, IO::OutputPin);
+            update();
+        } else if (port == InPorts::pindin) {
+            pin_din = in.asInteger();
+            io->PinSetMode(pin_din, IO::OutputPin);
+            update();
+        }
+    }
+private:
+    void update() {
+        if (pin_cs < 0 || pin_din < 0) {
+            return;
+        }
+        write_byte(data);
+    }
+
+    void write_byte(unsigned char DATA) {
+        // TODO: send output on ports?
+       for (uint8_t i=8; i>=1; i--) {
+            io->DigitalWrite(pin_clk, false);
+            io->DigitalWrite(pin_din, DATA&0x80);
+            io->DigitalWrite(pin_clk, true);
+            DATA = DATA<<1;
+       }
+    }
+
+private:
+    int8_t pin_din;
+    int8_t pin_clk;
+    uint8_t data;
+};
+
 // TODO: split out some of this into parallel->serial SPI like components?
 class LedMatrixMax : public SingleOutputComponent {
 public:
