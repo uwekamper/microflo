@@ -11,6 +11,7 @@ serialport = require 'serialport'
 
 componentLib = new microflo.componentlib.ComponentLibrary(require("../microflo/components.json"), "../microflo")
 
+# TODO: use runtime.RuntimeCommunication instead of transport directly
 class MicroFloComponent extends noflo.Component
   icon: 'lightbulb-o'
   description: 'MicroFlo graph running on a microcontroller'
