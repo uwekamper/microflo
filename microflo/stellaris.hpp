@@ -22,6 +22,7 @@
 #include "driverlib/rom_map.h"
 #include "driverlib/udma.h"
 #include "driverlib/ssi.h"
+#include "driverlib/pwm.h"
 #include "utils/uartstdio.h"
 #include "utils/ustdlib.h"
 
@@ -71,6 +72,27 @@ public:
         MAP_SysTickPeriodSet(MAP_SysCtlClockGet() / 1000); // 1ms
         MAP_SysTickIntEnable();
         MAP_SysTickEnable();
+
+
+        // PWM test
+        ROM_SysCtlPWMClockSet(SYSCTL_PWMDIV_64);
+        ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_PWM1);
+        ROM_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOD);
+
+        ROM_GPIOPinTypePWM(GPIO_PORTD_BASE, GPIO_PIN_0);
+        ROM_GPIOPinConfigure(GPIO_PD0_PWM0);
+
+        const int PWM_FREQUENCY = 55;
+        const uint32_t PWMClock = SysCtlClockGet() / 64;
+        const uint32_t period = (PWMClock / PWM_FREQUENCY);
+        const int duty = 50;
+
+        PWMGenConfigure(PWM1_BASE, PWM_GEN_0, PWM_GEN_MODE_DOWN);
+        PWMGenPeriodSet(PWM1_BASE, PWM_GEN_0, period);
+        ROM_PWMPulseWidthSet(PWM1_BASE, PWM_OUT_0, (period * 100)/duty);
+
+        ROM_PWMOutputState(PWM1_BASE, PWM_OUT_0_BIT, true);
+        ROM_PWMGenEnable(PWM1_BASE, PWM_GEN_0);
     }
 
     // Serial
